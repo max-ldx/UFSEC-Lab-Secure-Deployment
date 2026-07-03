@@ -1,23 +1,40 @@
 name: Build and Deploy
 on: 
   workflow_dispatch: 
+
+permissions:
+  contents: read
+  security-events: write
+  
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript
+ 
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4
+        
       - name: Build image
         run: |
           docker build -t myapp:latest .
+          
       - name: Sign in to Azure
         uses: azure/login@v2
         with:
           creds: ${{secrets.AZURE_CREDENTIALS}}
+          
       - name: Push to ACR
         run: |     
           az acr login -n labdeployacrmaximilien
           docker tag myapp:latest labdeployacrmaximilien.azurecr.io/myapp:latest
           docker push labdeployacrmaximilien.azurecr.io/myapp:latest
+          
       - name: Deploy to WebApp
         run: |
           az webapp config container set \
